@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.db
+db/
+db-orders/
+db-notifications/
+.idea/
+.vscode/

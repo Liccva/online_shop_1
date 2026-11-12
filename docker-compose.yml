@@ -1,0 +1,51 @@
+# Запуск итогового состояния (шаг 3): docker compose up --build
+# Другой шаг:                         STEP=1 docker compose up -d   (все шаги — в steps.py)
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    hostname: rabbitmq          # постоянное имя узла — сообщения переживают перезапуск
+    ports:
+      - "5672:5672"
+      - "15672:15672"           # панель: http://localhost:15672 (guest / guest)
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+
+  orders:
+    build: .
+    # 4 синхронных воркера = не больше 4 запросов одновременно; --timeout 120 — чтобы не убить воркер, ждущий 30 с
+    command: gunicorn orders:app --bind 0.0.0.0:8000 --workers 4 --timeout 120
+    environment:
+      STEP: ${STEP:-3}
+    ports:
+      - "8000:8000"
+    volumes:
+      - orders-data:/data
+    init: true
+    restart: on-failure
+    depends_on:
+      rabbitmq:
+        condition: service_healthy  # старт только после готовности брокера
+
+  notifications:
+    build: .
+    command: python notifications.py
+    environment:
+      STEP: ${STEP:-3}
+    volumes:
+      - notifications-data:/data
+    init: true
+    restart: on-failure
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+volumes:
+  rabbitmq-data:
+  orders-data:
+  notifications-data:

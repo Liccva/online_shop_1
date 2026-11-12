@@ -1,0 +1,4 @@
+# Скрипты и код запускаются в Linux-контейнерах и Git Bash — только LF.
+* text=auto eol=lf
+*.docx binary
+*.png binary
